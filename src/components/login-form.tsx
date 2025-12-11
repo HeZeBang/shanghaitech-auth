@@ -8,13 +8,20 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { submitLogin } from "@/app/login/actions"
+
+interface LoginFormProps extends React.ComponentProps<"form"> {
+  challenge?: string;
+}
 
 export function LoginForm({
   className,
+  challenge,
   ...props
-}: React.ComponentProps<"form">) {
+}: LoginFormProps) {
   return (
-    <form className={cn("flex flex-col gap-6", className)} {...props}>
+    <form action={submitLogin} className={cn("flex flex-col gap-6", className)} {...props}>
+      {challenge && <input type="hidden" name="challenge" value={challenge} />}
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Login to your account</h1>
@@ -24,7 +31,7 @@ export function LoginForm({
         </div>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" type="email" placeholder="m@example.com" required />
+          <Input id="email" name="email" type="email" placeholder="m@example.com" required />
         </Field>
         <Field>
           <div className="flex items-center">
@@ -36,7 +43,13 @@ export function LoginForm({
               Forgot your password?
             </a>
           </div>
-          <Input id="password" type="password" required />
+          <Input id="password" name="password" type="password" required />
+        </Field>
+        <Field>
+          <div className="flex items-center gap-2">
+             <input type="checkbox" id="remember" name="remember" />
+             <label htmlFor="remember" className="text-sm">Remember me</label>
+          </div>
         </Field>
         <Field>
           <Button type="submit">Login</Button>

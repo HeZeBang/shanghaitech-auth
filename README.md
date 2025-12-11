@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ShanghaiTech Auth Demo
+
+This is a demonstration of a custom Identity Provider using Ory Hydra and Next.js.
+
+## Prerequisites
+
+- Docker & Docker Compose
+- Node.js (v18+)
+- pnpm (or npm/yarn)
 
 ## Getting Started
 
-First, run the development server:
+### 1. Start Ory Hydra
+
+Start the Hydra service and Postgres database using Docker Compose:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker-compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This will start:
+- Hydra Public API at `http://localhost:4444`
+- Hydra Admin API at `http://localhost:4445`
+- Postgres Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Install Dependencies
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm install
+```
 
-## Learn More
+### 3. Register OAuth2 Client
 
-To learn more about Next.js, take a look at the following resources:
+Run the helper script to register the demo client in Hydra:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm register-client
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This creates a client with:
+- Client ID: `auth-code-client`
+- Client Secret: `secret`
+- Redirect URI: `http://localhost:3000/callback`
 
-## Deploy on Vercel
+### 4. Start the Next.js App
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The app will be available at `http://localhost:3000`.
+
+### 5. Test the Flow
+
+1. Open `http://localhost:3000` in your browser.
+2. Click the **Login with Hydra** button.
+3. You will be redirected to the Login page (`/login`).
+   - Enter any email (e.g., `user@example.com`) and password `password`.
+4. You will be redirected to the Consent page (`/consent`).
+   - Review the requested scopes and click **Allow**.
+5. You will be redirected back to the Callback page (`/callback`).
+   - You should see "Login Successful!" and the ID Token claims.
+
+## Project Structure
+
+- `src/app/login`: Custom Login UI & Logic
+- `src/app/consent`: Custom Consent UI & Logic
+- `src/app/callback`: Demo Client Callback Handler
+- `src/lib/hydra.ts`: Hydra Admin API Client
+- `docker-compose.yml`: Hydra & Postgres Setup

@@ -1,0 +1,33 @@
+serve:
+  public:
+    port: 4444
+    host: 0.0.0.0
+    cors:
+      enabled: true
+      allowed_origins:
+        - '*'
+  admin:
+    port: 4445
+    host: 0.0.0.0
+    cors:
+      enabled: true
+      allowed_origins:
+        - '*'
+
+urls:
+  self:
+    issuer: http://localhost:4444
+  login: http://localhost:3000/login
+  consent: http://localhost:3000/consent
+
+secrets:
+  system:
+    - youReallyNeedToChangeThis
+
+oidc:
+  subject_identifiers:
+    supported_types:
+      - public
+      - pairwise
+    pairwise:
+      salt: youReallyNeedToChangeThis
