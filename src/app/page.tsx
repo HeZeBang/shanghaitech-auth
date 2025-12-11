@@ -1,18 +1,32 @@
 import Link from "next/link";
 
 export default function Home() {
-  // Construct the OAuth2 Authorization URL
-  // In a real app, you would use a library to generate this to handle state, nonce, etc.
-  const hydraUrl = "http://localhost:4444/oauth2/auth";
+  // Get URLs from environment variables or use defaults
+  const hydraPublicUrl = process.env.NEXT_PUBLIC_HYDRA_PUBLIC_URL || "http://localhost:4444";
+  const clientId = process.env.NEXT_PUBLIC_CLIENT_ID || "auth-code-client";
+  const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI || "http://localhost:3000/callback";
+  const scope = process.env.NEXT_PUBLIC_SCOPE || "openid profile";
+
+  const hydraUrl = `${hydraPublicUrl}/oauth2/auth`;
   const params = new URLSearchParams({
-    client_id: "auth-code-client",
+    client_id: clientId,
     response_type: "code",
-    scope: "openid profile email",
-    redirect_uri: "http://localhost:3000/callback",
-    state: "random-state-string",
+    scope: scope,
+    redirect_uri: redirectUri,
+    state: generateRandomState(16), // Generate random state with 16 characters for entropy
   });
 
   const loginUrl = `${hydraUrl}?${params.toString()}`;
+
+  // Helper function to generate secure random state
+  function generateRandomState(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let state = '';
+    for (let i = 0; i < length; i++) {
+      state += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return state;
+  }
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">

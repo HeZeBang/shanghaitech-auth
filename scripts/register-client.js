@@ -1,16 +1,20 @@
 // const fetch = require('node-fetch'); // Uncomment if using Node < 18 and have installed node-fetch
 
 const hydraAdminUrl = process.env.HYDRA_ADMIN_URL || "http://localhost:4445";
+const clientId = process.env.NEXT_PUBLIC_CLIENT_ID || "auth-code-client";
+const clientSecret = process.env.OAUTH_CLIENT_SECRET || "secret";
+const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI || "http://localhost:3000/callback";
+const scope = process.env.NEXT_PUBLIC_SCOPE || "openid profile";
 
 async function registerClient() {
   const client = {
-    client_id: "auth-code-client",
-    client_name: "Demo Client",
-    client_secret: "secret",
-    grant_types: ["authorization_code", "refresh_token"],
-    redirect_uris: ["http://localhost:3000/callback"],
+    client_id: clientId,
+    client_name: process.env.OAUTH_CLIENT_NAME || "Demo Client",
+    client_secret: clientSecret,
+    grant_types: (process.env.OAUTH_GRANT_TYPES || "authorization_code,refresh_token").split(","),
+    redirect_uris: [redirectUri],
     response_types: ["code", "id_token"],
-    scope: "openid profile email",
+    scope: scope,
     token_endpoint_auth_method: "client_secret_basic",
   };
 

@@ -82,7 +82,11 @@ export async function submitConsent(formData: FormData) {
     if (response.data.redirect_to) {
       redirect(response.data.redirect_to);
     }
-  } catch (error) {
+  } catch (error: any) {
+    // NEXT_REDIRECT is a special error thrown by redirect()
+    if (error?.name === 'NEXT_REDIRECT') {
+      throw error;
+    }
     console.error("Failed to accept consent request:", error);
     throw error;
   }
