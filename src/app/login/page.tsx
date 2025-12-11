@@ -30,9 +30,26 @@ export default async function LoginPage({
         redirect(acceptResponse.redirect_to);
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    // NEXT_REDIRECT is a special error thrown by redirect()
+    if (error?.name === 'NEXT_REDIRECT') {
+      throw error;
+    }
     console.error("Error fetching login request:", error);
-    return <div>Error fetching login request details</div>;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return (
+      <div className="p-10 space-y-4">
+        <h1 className="text-2xl font-bold text-red-600">Error</h1>
+        <p>Failed to fetch login request details.</p>
+        <details className="bg-gray-100 p-4 rounded text-sm">
+          <summary className="cursor-pointer font-semibold">Error Details</summary>
+          <pre className="mt-2 overflow-auto">{errorMessage}</pre>
+        </details>
+        <p className="text-sm text-gray-600">
+          Challenge: <code>{login_challenge}</code>
+        </p>
+      </div>
+    );
   }
 
   return (

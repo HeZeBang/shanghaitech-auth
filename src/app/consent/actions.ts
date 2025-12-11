@@ -24,12 +24,38 @@ export async function submitConsent(formData: FormData) {
 
   const subject = consentRequest.subject;
 
-  // Mock user info fetching
-  const userInfo = {
-    email: "user@example.com",
-    name: "Zhang San",
-    picture: "https://github.com/shadcn.png",
-  };
+  // Fetch real user info from the API
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  
+  let userInfo;
+  try {
+    const response = await fetch(`${apiUrl}/api/auth/userinfo`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ subject }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      console.error("Failed to fetch user info:", data.error);
+      // Fallback to basic info
+      userInfo = {
+        sid: subject,
+        name: subject,
+      };
+    } else {
+      userInfo = data.user_info;
+    }
+  } catch (error) {
+    console.error("Error fetching user info:", error);
+    userInfo = {
+      sid: subject,
+      name: subject,
+    };
+  }
 
   try {
     const response = await hydraAdmin.acceptOAuth2ConsentRequest({
@@ -41,14 +67,13 @@ export async function submitConsent(formData: FormData) {
         remember_for: 3600,
         session: {
           id_token: {
-            email: userInfo.email,
+            sid: userInfo.sid,
             name: userInfo.name,
-            picture: userInfo.picture,
             // Add other claims as needed
           },
           access_token: {
              // Add extra claims to access token if needed
-             role: "user",
+             sid: userInfo.sid,
           }
         },
       },

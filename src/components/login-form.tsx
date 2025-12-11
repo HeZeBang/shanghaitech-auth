@@ -30,8 +30,8 @@ export function LoginForm({
           </p>
         </div>
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" name="email" type="email" placeholder="m@example.com" required />
+          <FieldLabel htmlFor="username">Student ID</FieldLabel>
+          <Input id="username" name="username" type="text" placeholder="Enter your student ID" required />
         </Field>
         <Field>
           <div className="flex items-center">
