@@ -181,8 +181,6 @@ export async function POST(req: NextRequest) {
     const finalCookies = postResult.cookies;
     const finalBody = postResult.body;
 
-    console.log("Final cookies after login attempt:", finalCookies);
-
     // Check if login was successful
     const hasError =
       finalBody.includes("authError") ||

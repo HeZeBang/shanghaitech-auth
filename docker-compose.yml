@@ -1,60 +1,92 @@
 services:
-  sqlite:
-    image: docker.1ms.run/busybox
-    volumes:
-      - hydra-sqlite:/mnt/sqlite
-    command: "chmod -R 777 /mnt/sqlite"
-
+  # --- Hydra Database ---
   hydra-migrate:
-    image: docker.1ms.run/oryd/hydra:v25.4.0
+    image: oryd/hydra:v25.4.0
     environment:
       - DSN=sqlite:///mnt/sqlite/db.sqlite?_fk=true&mode=rwc
     command: migrate -c /etc/config/hydra/hydra.yml sql up -e --yes
     volumes:
       - hydra-sqlite:/mnt/sqlite:rw
-      - type: bind
-        source: ./hydra
-        target: /etc/config/hydra
+      - ./hydra:/etc/config/hydra
     restart: on-failure
-    networks:
-      - intranet
-    depends_on:
-      - sqlite
+    networks: [internal]
 
+  # --- Ory Hydra (OAuth2/OIDC Server) ---
   hydra:
-    image: docker.1ms.run/oryd/hydra:v25.4.0
-    ports:
-      - "4444:4444" # Public port
-      - "4445:4445" # Admin port
-      - "5555:5555" # Port for callback app (optional)
-    command: serve -c /etc/config/hydra/hydra.yml all --dev
-    volumes:
-      - hydra-sqlite:/mnt/sqlite:rw
-      - type: bind
-        source: ./hydra
-        target: /etc/config/hydra
+    image: oryd/hydra:v25.4.0
+    command: serve -c /etc/config/hydra/hydra.yml all
     environment:
       - DSN=sqlite:///mnt/sqlite/db.sqlite?_fk=true&mode=rwc
-      - URLS_SELF_ISSUER=http://localhost:4444
-      - URLS_LOGIN=http://localhost:3000/login
-      - URLS_CONSENT=http://localhost:3000/consent
-      - SECRETS_SYSTEM=youReallyNeedToChangeThis
+      - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}
+      - URLS_LOGIN=${APP_URL}/login
+      - URLS_CONSENT=${APP_URL}/consent
+      - SECRETS_SYSTEM=${SECRETS_SYSTEM}
       - OIDC_SUBJECT_IDENTIFIERS_SUPPORTED_TYPES=public,pairwise
-      - OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT=youReallyNeedToChangeThis
+      - OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT=${OIDC_PAIRWISE_SALT}
       - SERVE_PUBLIC_CORS_ENABLED=true
-      - SERVE_PUBLIC_CORS_ALLOWED_ORIGINS=*
-      - SERVE_ADMIN_CORS_ENABLED=true
-      - SERVE_ADMIN_CORS_ALLOWED_ORIGINS=*
+      - SERVE_PUBLIC_CORS_ALLOWED_ORIGINS=${APP_URL}
+      - SERVE_ADMIN_CORS_ENABLED=false
+    ports:
+      - "${HYDRA_PUBLIC_PORT:-4444}:4444"
+      # Admin port NOT exposed to host by default — access via internal network
+    volumes:
+      - hydra-sqlite:/mnt/sqlite:rw
+      - ./hydra:/etc/config/hydra
     restart: unless-stopped
     depends_on:
-      - hydra-migrate
-      - sqlite
-    networks:
-      - intranet
+      hydra-migrate:
+        condition: service_completed_successfully
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:4444/health/alive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Next.js App ---
+  app:
+    build: .
+    environment:
+      - HYDRA_ADMIN_URL=http://hydra:4445
+      - NEXT_PUBLIC_HYDRA_PUBLIC_URL=${HYDRA_PUBLIC_URL}
+      - NEXT_PUBLIC_BASE_URL=${APP_URL}
+      - NEXT_PUBLIC_CLIENT_ID=${CLIENT_ID}
+      - NEXT_PUBLIC_REDIRECT_URI=${APP_URL}/callback
+      - NEXT_PUBLIC_SCOPE=${CLIENT_SCOPE:-openid profile email}
+      - OAUTH_CLIENT_SECRET=${CLIENT_SECRET}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    restart: unless-stopped
+    depends_on:
+      hydra:
+        condition: service_healthy
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Register OAuth Client (runs once) ---
+  register-client:
+    build: .
+    entrypoint: ["node", "scripts/register-client.js"]
+    environment:
+      - HYDRA_ADMIN_URL=http://hydra:4445
+      - CLIENT_ID=${CLIENT_ID}
+      - CLIENT_SECRET=${CLIENT_SECRET}
+      - CLIENT_NAME=${CLIENT_NAME:-ShanghaiTech Auth}
+      - REDIRECT_URI=${APP_URL}/callback
+      - CLIENT_SCOPE=${CLIENT_SCOPE:-openid profile email}
+      - GRANT_TYPES=${GRANT_TYPES:-authorization_code,refresh_token}
+    depends_on:
+      hydra:
+        condition: service_healthy
+    restart: on-failure
+    networks: [internal]
 
 networks:
-  intranet:
+  internal:
 
 volumes:
   hydra-sqlite:
-

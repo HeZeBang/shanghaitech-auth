@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env*
+api/
+*.md
+.python-version
+__pycache__
+.venv

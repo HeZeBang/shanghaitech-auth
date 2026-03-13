@@ -1,0 +1,54 @@
+# One-shot Job: registers the OAuth client in Hydra.
+# Re-run after changing client config: kubectl delete job register-client -n shanghaitech-auth && kubectl apply -f k8s/register-client.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: register-client
+  namespace: shanghaitech-auth
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: register-client
+          image: ghcr.io/hezebang/shanghaitech-auth:latest
+          command: ["node", "scripts/register-client.js"]
+          env:
+            - name: APP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: APP_URL
+            - name: HYDRA_ADMIN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: HYDRA_ADMIN_URL
+            - name: CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shanghaitech-auth-secrets
+                  key: CLIENT_SECRET
+            - name: CLIENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: CLIENT_NAME
+            - name: REDIRECT_URI
+              value: "$(APP_URL)/callback"
+            - name: CLIENT_SCOPE
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: CLIENT_SCOPE
+            - name: GRANT_TYPES
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: GRANT_TYPES

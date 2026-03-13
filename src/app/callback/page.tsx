@@ -25,17 +25,18 @@ export default async function CallbackPage({
     return <div className="p-10">No code provided.</div>;
   }
 
+  const clientId = process.env.NEXT_PUBLIC_CLIENT_ID || "auth-code-client";
+  const clientSecret = process.env.OAUTH_CLIENT_SECRET || "secret";
+  const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI || "http://localhost:3000/callback";
+
   let tokenData;
   try {
-    // Exchange code for token
-    // In a real app, you would use a proper OAuth2 client library (like next-auth, passport, etc.)
-    // Here we manually call the token endpoint for demonstration.
-    const basicAuth = Buffer.from("auth-code-client:secret").toString("base64");
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
     const response = await hydraPublic.oauth2TokenExchange({
       grantType: "authorization_code",
       code: code,
-      redirectUri: "http://localhost:3000/callback",
-      clientId: "auth-code-client",
+      redirectUri: redirectUri,
+      clientId: clientId,
     }, {
       headers: {
         Authorization: `Basic ${basicAuth}`,
@@ -64,7 +65,6 @@ export default async function CallbackPage({
 
       <div className="border rounded-lg p-6 shadow-sm">
         <h2 className="text-xl font-semibold mb-4">ID Token Claims (User Info)</h2>
-        {/* We decode the ID Token simply to show its content. In production verify signature! */}
         <pre className="bg-slate-950 text-slate-50 p-4 rounded overflow-auto text-sm">
           {tokenData.id_token
             ? JSON.stringify(JSON.parse(atob(tokenData.id_token.split('.')[1])), null, 2)

@@ -1,150 +1,156 @@
-# ShanghaiTech Auth Demo
+# ShanghaiTech Auth
 
-This is a demonstration of a custom Identity Provider using Ory Hydra and Next.js that integrates with ShanghaiTech IDS.
+OAuth2/OpenID Connect Identity Provider for ShanghaiTech, built with Next.js and Ory Hydra.
 
-## Prerequisites
+Authenticates users against ShanghaiTech IDS and issues standard OAuth2 tokens with user claims (`sid`, `name`, `email`).
 
-- Docker & Docker Compose
-- Node.js (v18+)
-- pnpm (or npm/yarn)
+## Quick Start (Production)
 
-## Architecture
-
-```
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│   Browser   │─────▶│  Ory Hydra   │─────▶│  Next.js    │
-│             │◀─────│  (OAuth2)    │◀─────│  App        │
-└─────────────┘      └──────────────┘      └─────────────┘
-                                                  │
-                                                  ▼
-                                           ┌──────────────────────────────┐
-                                           │   ShanghaiTech IDS           │
-                                           │   (User Authentication)      │
-                                           └──────────────────────────────┘
-```
-
-## Getting Started
-
-### 1. Start Ory Hydra
-
-Start the Hydra service using Docker Compose:
+### 1. Configure
 
 ```bash
-docker-compose up -d
+cp env.example .env
 ```
 
-This will start:
-- Hydra Public API at `http://localhost:4444`
-- Hydra Admin API at `http://localhost:4445`
-
-### 2. Install Dependencies
+Edit `.env` — set your domain URLs and generate secrets:
 
 ```bash
-pnpm install
+# Generate secrets
+openssl rand -hex 32   # for SECRETS_SYSTEM
+openssl rand -hex 32   # for OIDC_PAIRWISE_SALT
+openssl rand -hex 32   # for CLIENT_SECRET
 ```
 
-### 3. Register OAuth2 Client
-
-Run the helper script to register the demo client in Hydra:
+### 2. Deploy
 
 ```bash
-pnpm register-client
+docker compose up -d
 ```
 
-This creates a client with:
-- Client ID: `auth-code-client`
-- Client Secret: `secret`
-- Redirect URI: `http://localhost:3000/callback`
+This starts 3 services:
+- **app** (Next.js) — login/consent UI + IDS authentication API
+- **hydra** — OAuth2/OIDC protocol engine
+- **register-client** — auto-registers the OAuth client (runs once, then exits)
 
-### 4. Start the App
+### 3. Verify
 
 ```bash
-pnpm dev
-```
+# Check services
+docker compose ps
 
-The app will be available at `http://localhost:3000`.
+# Check Hydra health
+curl http://localhost:4444/health/alive
 
-### 5. Test the Flow
-
-1. Open `http://localhost:3000` in your browser.
-2. Click the **Login with Hydra** button.
-3. You will be redirected to the Login page (`/login`).
-   - Enter your ShanghaiTech student ID and password.
-4. You will be redirected to the Consent page (`/consent`).
-   - Review the requested scopes and click **Allow**.
-5. You will be redirected back to the Callback page (`/callback`).
-   - You should see "Login Successful!" and the ID Token claims with your student info.
-
-## Project Structure
-
-```
-.
-├── src/
-│   ├── app/
-│   │   ├── api/auth/          # Next.js API routes (IDS authentication)
-│   │   │   ├── login/         # POST /api/auth/login
-│   │   │   └── userinfo/      # POST /api/auth/userinfo
-│   │   ├── login/             # Login UI & Server Actions
-│   │   ├── consent/           # Consent UI & Server Actions
-│   │   ├── callback/          # OAuth callback handler
-│   │   └── page.tsx           # Home page
-│   ├── components/
-│   │   ├── login-form.tsx     # Login form component
-│   │   └── ui/                # UI components
-│   └── lib/
-│       ├── hydra.ts           # Hydra Admin API client
-│       ├── hydra-public.ts    # Hydra Public API client
-│       └── session-store.ts   # In-memory session store
-├── scripts/
-│   └── register-client.js     # OAuth client registration
-└── docker-compose.yml         # Hydra setup
-```
-
-## API Endpoints
-
-### Next.js API Routes
-
-- `POST /api/auth/login` - Authenticate user against ShanghaiTech IDS
-  ```json
-  {
-    "username": "student_id",
-    "password": "password"
-  }
-  ```
-
-- `POST /api/auth/userinfo` - Get user information for consent flow
-  ```json
-  {
-    "subject": "student_id"
-  }
-  ```
-
-## Environment Variables
-
-Create a `.env.local` file in the root directory:
-
-```env
-HYDRA_ADMIN_URL=http://localhost:4445
-NEXT_PUBLIC_HYDRA_PUBLIC_URL=http://localhost:4444
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
+# Check OIDC discovery
+curl http://localhost:4444/.well-known/openid-configuration
 ```
 
 ## Development
 
-- **Next.js dev server**: `pnpm dev`
-- **Hydra Admin API**: `http://localhost:4445`
+```bash
+pnpm install
 
-## Troubleshooting
+# Start Hydra only
+docker compose up hydra -d
 
-1. **Docker containers not starting**:
-   ```bash
-   docker-compose down
-   docker-compose up -d
-   ```
+# Register client
+pnpm register-client
 
-2. **Client registration failed**:
-   ```bash
-   pnpm register-client
-   ```
+# Start Next.js dev server
+pnpm dev
+```
 
-3. **Port conflicts**: Ensure ports 3000, 4444, and 4445 are available.
+## OAuth2 Integration
+
+Any application supporting OAuth2/OIDC can authenticate users through this service.
+
+### Register a Client
+
+```bash
+curl -X POST http://hydra-admin:4445/admin/clients \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "client_id": "my-app",
+    "client_secret": "my-secret",
+    "client_name": "My Application",
+    "grant_types": ["authorization_code", "refresh_token"],
+    "response_types": ["code"],
+    "scope": "openid profile email",
+    "redirect_uris": ["https://my-app.com/callback"],
+    "token_endpoint_auth_method": "client_secret_basic"
+  }'
+```
+
+### Use OIDC Discovery
+
+Most OAuth libraries support auto-configuration via:
+
+```
+https://<HYDRA_PUBLIC_URL>/.well-known/openid-configuration
+```
+
+Example with `next-auth`:
+
+```ts
+import NextAuth from "next-auth";
+
+export const { handlers, auth } = NextAuth({
+  providers: [{
+    id: "shanghaitech",
+    name: "ShanghaiTech",
+    type: "oidc",
+    issuer: "https://hydra.example.com/",
+    clientId: "my-app",
+    clientSecret: "my-secret",
+  }],
+});
+```
+
+### ID Token Claims
+
+After authentication, the ID token contains:
+
+```json
+{
+  "sid": "2024xxxxx",
+  "name": "张三",
+  "email": "zhangsan@shanghaitech.edu.cn"
+}
+```
+
+## Architecture
+
+```
+Browser → Hydra (OAuth2) → Next.js (Login/Consent UI)
+                                  ↓
+                           ShanghaiTech IDS
+                           (Authentication)
+```
+
+## Project Structure
+
+```
+├── src/app/
+│   ├── api/auth/login/     POST /api/auth/login (IDS authentication)
+│   ├── api/auth/userinfo/  POST /api/auth/userinfo (user data)
+│   ├── login/              Login page + server action
+│   ├── consent/            Consent page + server action
+│   └── callback/           OAuth callback (demo token display)
+├── hydra/hydra.yml         Hydra configuration
+├── scripts/                Client registration script
+├── Dockerfile              Multi-stage production build
+└── docker-compose.yml      Full stack deployment
+```
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `APP_URL` | Next.js app public URL |
+| `HYDRA_PUBLIC_URL` | Hydra public API URL |
+| `CLIENT_ID` | OAuth client ID |
+| `CLIENT_SECRET` | OAuth client secret |
+| `SECRETS_SYSTEM` | Hydra system secret (token signing) |
+| `OIDC_PAIRWISE_SALT` | Hydra pairwise subject salt |
+
+See `env.example` for all options.

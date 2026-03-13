@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: shanghaitech-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shanghaitech-auth-app
+  template:
+    metadata:
+      labels:
+        app: shanghaitech-auth-app
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/hezebang/shanghaitech-auth:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: HYDRA_ADMIN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: HYDRA_ADMIN_URL
+            - name: NEXT_PUBLIC_HYDRA_PUBLIC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: HYDRA_PUBLIC_URL
+            - name: NEXT_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: APP_URL
+            - name: NEXT_PUBLIC_CLIENT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: CLIENT_ID
+            - name: NEXT_PUBLIC_REDIRECT_URI
+              value: "$(NEXT_PUBLIC_BASE_URL)/callback"
+            - name: NEXT_PUBLIC_SCOPE
+              valueFrom:
+                configMapKeyRef:
+                  name: shanghaitech-auth-config
+                  key: CLIENT_SCOPE
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: shanghaitech-auth-secrets
+                  key: CLIENT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: shanghaitech-auth
+spec:
+  selector:
+    app: shanghaitech-auth-app
+  ports:
+    - port: 3000
+      targetPort: 3000
