@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "register-client": "node scripts/register-client.js",
-    "api": "uvicorn api.main:app --reload --port 8000"
+    "register-client": "node scripts/register-client.js"
   },
   "dependencies": {
     "@ory/client": "^1.22.15",

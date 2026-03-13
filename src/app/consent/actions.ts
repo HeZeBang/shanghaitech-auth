@@ -24,12 +24,12 @@ export async function submitConsent(formData: FormData) {
 
   const subject = consentRequest.subject;
 
-  // Fetch real user info from the API
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  
+  // Fetch real user info from the internal API
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
   let userInfo;
   try {
-    const response = await fetch(`${apiUrl}/api/auth/userinfo`, {
+    const response = await fetch(`${baseUrl}/api/auth/userinfo`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

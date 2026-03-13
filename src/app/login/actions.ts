@@ -13,11 +13,11 @@ export async function submitLogin(formData: FormData) {
     throw new Error("Missing login challenge");
   }
 
-  // Call the FastAPI backend to authenticate
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  
+  // Call the internal Next.js API route to authenticate
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
   try {
-    const response = await fetch(`${apiUrl}/api/auth/login`, {
+    const response = await fetch(`${baseUrl}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
