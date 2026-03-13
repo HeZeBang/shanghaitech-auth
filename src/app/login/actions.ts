@@ -13,8 +13,8 @@ export async function submitLogin(formData: FormData) {
     throw new Error("Missing login challenge");
   }
 
-  // Call the internal Next.js API route to authenticate
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  // Call the internal Next.js API route (always use localhost, never go through public URL)
+  const baseUrl = "http://localhost:3000";
 
   try {
     const response = await fetch(`${baseUrl}/api/auth/login`, {

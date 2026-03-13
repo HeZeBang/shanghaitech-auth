@@ -29,8 +29,8 @@ export async function submitConsent(formData: FormData) {
 
   const subject = consentRequest.subject;
 
-  // Fetch real user info from the internal API
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  // Fetch real user info from the internal API (always use localhost)
+  const baseUrl = "http://localhost:3000";
 
   let userInfo;
   try {
