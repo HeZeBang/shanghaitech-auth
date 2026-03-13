@@ -154,14 +154,17 @@ export default async function ConsentPage({
               readOnly={!!emailFromSession}
               required
               pattern=".+@(alumni\.|)shanghaitech\.edu\.cn$"
-              title="Must end with @shanghaitech.edu.cn or @alumni.shanghaitech.edu.cn"
-              placeholder="username@shanghaitech.edu.cn"
+              title="ShanghaiTech Email"
+              placeholder="@(alumni.)shanghaitech.edu.cn"
               className={`w-full rounded border px-3 py-2 text-sm ${
                 emailFromSession
                   ? "bg-gray-100 text-gray-600 cursor-not-allowed"
                   : "bg-white"
               }`}
             />
+            <span className="text-xs text-gray-500">
+              Must end with @shanghaitech.edu.cn or @alumni.shanghaitech.edu.cn
+            </span>
           </div>
 
           <div className="flex items-center space-x-2">
