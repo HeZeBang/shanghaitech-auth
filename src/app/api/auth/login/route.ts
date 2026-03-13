@@ -3,10 +3,19 @@ import crypto from "crypto";
 import { sessionStore } from "@/lib/session-store";
 
 const LOGIN_URL =
-  "https://ids.shanghaitech.edu.cn/authserver/login?service=";
+  "https://ids.shanghaitech.edu.cn/authserver/login?service=https://egate.shanghaitech.edu.cn/xsfw/sys/jbxxapp/*default/index.do";
 
 const USER_CONF_URL =
   "https://ids.shanghaitech.edu.cn/personalInfo/common/getUserConf";
+
+const JBXX_UI_URL = 
+  "https://egate.shanghaitech.edu.cn/xsfw/sys/jbxxapp/*default/index.do#/jbxx";
+
+const JBXX_APP_URL =
+  "https://egate.shanghaitech.edu.cn/xsfw/sys/funauthapp/api/getAppConfig/jbxxapp-4585275700341858.do?v=08082535938553316";
+
+const JBXX_URL =
+  "https://egate.shanghaitech.edu.cn/xsfw/sys/jbxxapp/modules/jbxx/cxxsjbxx.do";
 
 const HEADERS: Record<string, string> = {
   "User-Agent":
@@ -172,6 +181,8 @@ export async function POST(req: NextRequest) {
     const finalCookies = postResult.cookies;
     const finalBody = postResult.body;
 
+    console.log("Final cookies after login attempt:", finalCookies);
+
     // Check if login was successful
     const hasError =
       finalBody.includes("authError") ||
@@ -205,10 +216,43 @@ export async function POST(req: NextRequest) {
 
     const subject = infoData.datas.uid as string;
     const name = infoData.datas.cn as string;
-    const userInfo = { sid: subject, name };
 
-    // Store cookies for later userinfo retrieval during consent
-    sessionStore.set(subject, finalCookies);
+    // Step 5: Try to fetch email from egate.shanghaitech.edu.cn
+    let email = "";
+    try {
+      const loginEgateResp = await fetchWithCookies(JBXX_UI_URL, {
+        method: "GET",
+        cookieJar: finalCookies,
+      });
+
+      const egateCookies = loginEgateResp.cookies;
+
+      const egateAppResp = await fetchWithCookies(JBXX_APP_URL, {
+        method: "GET",
+        cookieJar: egateCookies,
+      });
+
+      const appCookies = egateAppResp.cookies;
+
+      const emailResp = await fetchWithCookies(JBXX_URL, {
+        method: "GET",
+        cookieJar: appCookies,
+      });
+      
+      const emailData = JSON.parse(emailResp.body);
+      const rows = emailData?.datas?.cxxsjbxx?.rows;
+      if (Array.isArray(rows) && rows.length > 0 && rows[0].DZXX) {
+        email = rows[0].DZXX;
+      }
+    } catch (e: unknown) {
+      console.error("Failed to fetch email:", e);
+      // Email fetch failed, leave empty
+    }
+
+    const userInfo = { sid: subject, name, email };
+
+    // Store session data for later userinfo retrieval during consent
+    sessionStore.set(subject, { cookies: finalCookies, email });
 
     return NextResponse.json({
       success: true,

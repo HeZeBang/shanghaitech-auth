@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { submitConsent } from "./actions";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { sessionStore } from "@/lib/session-store";
 
 export default async function ConsentPage({
   searchParams,
@@ -72,6 +73,10 @@ export default async function ConsentPage({
     );
   }
 
+  // Fetch email from session store
+  const session = sessionStore.get(consentRequest.subject ?? "");
+  const emailFromSession = session?.email ?? "";
+
   if (consentRequest.skip) {
     try {
       const acceptResponse = await hydraAdmin.acceptOAuth2ConsentRequest({
@@ -112,7 +117,7 @@ export default async function ConsentPage({
 
         <form action={submitConsent} className="space-y-4">
           <input type="hidden" name="challenge" value={consent_challenge} />
-          
+
           <div className="space-y-2">
             <p className="font-medium">Requested Scopes:</p>
             {consentRequest.requested_scope?.map((scope) => (
@@ -123,13 +128,40 @@ export default async function ConsentPage({
                   name="grant_scope"
                   value={scope}
                   defaultChecked
+                  disabled
                   className="h-4 w-4 rounded border-gray-300"
                 />
-                <label htmlFor={scope} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <input type="hidden" name="grant_scope" value={scope} />
+                <label htmlFor={scope} className="text-sm font-medium leading-none text-gray-500">
                   {scope}
                 </label>
               </div>
             ))}
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+              {!emailFromSession && (
+                <span className="text-red-500 ml-1">(auto-fetch failed, please enter manually)</span>
+              )}
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              defaultValue={emailFromSession}
+              readOnly={!!emailFromSession}
+              required
+              pattern=".+@(alumni\.|)shanghaitech\.edu\.cn$"
+              title="Must end with @shanghaitech.edu.cn or @alumni.shanghaitech.edu.cn"
+              placeholder="username@shanghaitech.edu.cn"
+              className={`w-full rounded border px-3 py-2 text-sm ${
+                emailFromSession
+                  ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                  : "bg-white"
+              }`}
+            />
           </div>
 
           <div className="flex items-center space-x-2">

@@ -7,9 +7,14 @@ export async function submitConsent(formData: FormData) {
   const challenge = formData.get("challenge") as string;
   const grantScope = formData.getAll("grant_scope") as string[];
   const remember = formData.get("remember") === "on";
+  const email = formData.get("email") as string;
 
   if (!challenge) {
     throw new Error("Missing consent challenge");
+  }
+
+  if (email && !/^.+@(alumni\.|)shanghaitech\.edu\.cn$/.test(email)) {
+    throw new Error("Email must end with @shanghaitech.edu.cn or @alumni.shanghaitech.edu.cn");
   }
 
   // In a real app, you would fetch user info based on the subject from the consent request
@@ -41,19 +46,24 @@ export async function submitConsent(formData: FormData) {
 
     if (!response.ok || !data.success) {
       console.error("Failed to fetch user info:", data.error);
-      // Fallback to basic info
       userInfo = {
         sid: subject,
         name: subject,
+        email: email || "",
       };
     } else {
       userInfo = data.user_info;
+      // Use form email if API didn't return one, or user manually entered one
+      if (!userInfo.email && email) {
+        userInfo.email = email;
+      }
     }
   } catch (error) {
     console.error("Error fetching user info:", error);
     userInfo = {
       sid: subject,
       name: subject,
+      email: email || "",
     };
   }
 
@@ -69,11 +79,11 @@ export async function submitConsent(formData: FormData) {
           id_token: {
             sid: userInfo.sid,
             name: userInfo.name,
-            // Add other claims as needed
+            email: userInfo.email,
           },
           access_token: {
-             // Add extra claims to access token if needed
              sid: userInfo.sid,
+             email: userInfo.email,
           }
         },
       },

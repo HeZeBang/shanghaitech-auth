@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cookies = sessionStore.get(subject);
-    if (!cookies) {
+    const session = sessionStore.get(subject);
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Session not found or expired" },
         { status: 404 }
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const resp = await fetch(USER_CONF_URL, {
       method: "POST",
       headers: {
-        Cookie: cookies,
+        Cookie: session.cookies,
         ...HEADERS,
       },
     });
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       user_info: {
         sid: data.datas.uid,
         name: data.datas.cn,
+        email: session.email,
       },
     });
   } catch (e: unknown) {
