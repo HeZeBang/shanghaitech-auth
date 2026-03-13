@@ -22,7 +22,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: hydra-migrate
-          image: oryd/hydra:v25.4.0
+          image: docker.1ms.run/oryd/hydra:v25.4.0
           command: ["hydra", "migrate", "sql", "up", "-e", "--yes"]
           env:
             - name: DSN
@@ -53,10 +53,9 @@ spec:
     spec:
       containers:
         - name: hydra
-          image: oryd/hydra:v25.4.0
-          command: ["hydra", "serve", "all"]
-          args:
-            - "--dangerous-force-http"  # Remove if using TLS termination at Hydra level
+          image: docker.1ms.run/oryd/hydra:v25.4.0
+          command: ["hydra", "serve", "all", "--dev"]
+          # --dev disables HTTPS requirement (TLS is terminated at Ingress level)
           ports:
             - name: public
               containerPort: 4444
